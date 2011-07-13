@@ -46,8 +46,12 @@ class FriendshipManager(models.Manager):
         return qs
 
     def are_friends(self, user1, user2):
-        return bool(Friendship.objects.get(user=user1).friends.filter(
-                                                          user=user2).count())
+        try:
+            friendship = Friendship.objects.get(user=user1)
+        except Friendship.DoesNotExist:
+            return False
+        else:
+            return friendship.friends.filter(user=user2).exists()
 
     def befriend(self, user1, user2):
         Friendship.objects.get(user=user1).friends.add(
