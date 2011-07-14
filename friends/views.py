@@ -1,8 +1,9 @@
-from django.http import HttpResponseRedirect, HttpResponseBadRequest, Http404
+from django.http import HttpResponseRedirect, HttpResponseBadRequest, Http404, HttpResponse
 from django.db import IntegrityError, transaction
 from django.views.generic.list_detail import object_list
 from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext
+from django.utils import simplejson
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from models import FriendshipRequest, Friendship, UserBlocks
@@ -120,6 +121,11 @@ def friendship_request(request, username, redirect_to, other_user, **kwargs):
     request.user.message_set.create(message=message % {
                    'user': other_user.get_full_name() or other_user.username})
     transaction.commit()
+
+    if request.is_ajax():
+        json = simplejson.dumps(message)
+        return HttpResponse(json, mimetype='application/json')
+
     return HttpResponseRedirect(redirect_to)
 
 
