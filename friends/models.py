@@ -1,5 +1,6 @@
 import datetime
 from django.db import models
+from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.models import User
 import signals
@@ -46,17 +47,25 @@ class FriendshipManager(models.Manager):
         return qs
 
     def are_friends(self, user1, user2):
-        return bool(Friendship.objects.get(user=user1).friends.filter(
-                                                          user=user2).count())
-
+        friendship, _ = Friendship.objects.get_or_create(user=user1)
+        return friendship.friends.filter(user=user2).exists()
+        
     def befriend(self, user1, user2):
-        Friendship.objects.get(user=user1).friends.add(
-                                           Friendship.objects.get(user=user2))
+        friendship, _ = Friendship.objects.get_or_create(user=user1)
+        other_friendship, _ = Friendship.objects.get_or_create(user=user2)
+        friendship.friends.add(other_friendship)
 
     def unfriend(self, user1, user2):
         Friendship.objects.get(user=user1).friends.remove(
                                            Friendship.objects.get(user=user2))
 
+        #deleting the friendship request as well, to prevent the case when 
+        #the unfriended user could add you back without a request, if he was
+        #the one who sent the initial friendship request
+        FriendshipRequest.objects.get(
+                                    Q(from_user=user1, to_user=user2) |
+                                    Q(from_user=user2, to_user=user1)
+        ).delete()
 
 class Friendship(models.Model):
     user = models.OneToOneField(User, related_name='friendship')
